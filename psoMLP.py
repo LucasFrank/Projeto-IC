@@ -25,14 +25,13 @@ def MAPE(y_true, y_pred):
     return errors / len(y_pred)
 
 def modelNN(n,shape,epochs,learning_rate):
-    model = Sequential()
-    get_custom_objects().update({'custom_activation': Activation(custom_activation)})
     cf = 'custom_activation'
+    model = Sequential()
+    get_custom_objects().update({cf: Activation(custom_activation)})
     model.add(Dense(units = n,input_shape = shape ,activation = cf, kernel_initializer='normal'))
     model.add(Dense(units = n, activation = cf, kernel_initializer = 'normal'))
     model.add(Dense(units = n, activation = cf, kernel_initializer = 'normal'))
     model.add(Dense(units = n, activation = cf, kernel_initializer = 'normal'))
-    model.add(Flatten())
     model.add(Dense(units = 1, activation = 'sigmoid', kernel_initializer = 'normal'))
     decay_rate = learning_rate/epochs;
     adam = Adam(lr = learning_rate,decay = decay_rate)
@@ -115,9 +114,6 @@ with open('NN_PEMS.csv', 'w', 1) as nn_file:
     Y1_test = np.array( [Y1[j] for j in rows1] )
     X1_train = np.array( [X1[j] for j in list(set(range(len(X1))) - set(rows1))] )
     Y1_train = np.array([Y1[j] for j in list(set(range(len(Y1))) - set(rows1))] )
-    
-    X1_train = np.reshape(X1_train,(X1_train.shape[0], 1, X1_train.shape[1]))
-    X1_test = np.reshape(X1_test,(X1_test.shape[0], 1, X1_test.shape[1]))
     
     print('   Initializing the models...')
     results_nn1 = list()
