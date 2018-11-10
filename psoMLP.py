@@ -24,10 +24,10 @@ def MAPE(y_true, y_pred):
         errors = errors + (abs((float(y_true[i]) - float(y_pred[i]))) / float(y_true[i]))
     return errors / len(y_pred)
 
-def modelNN(n,shape,epochs,learning_rate):
+def modelNN(n,shape,epochs,learning_rate,alpha):
     cf = 'custom_activation'
     model = Sequential()
-    get_custom_objects().update({cf: Activation(custom_activation)})
+    get_custom_objects().update({cf: Activation(custom_function(alpha))})
     model.add(Dense(units = n,input_shape = shape ,activation = cf, kernel_initializer='normal'))
     model.add(Dense(units = n, activation = cf, kernel_initializer = 'normal'))
     model.add(Dense(units = n, activation = cf, kernel_initializer = 'normal'))
@@ -38,10 +38,11 @@ def modelNN(n,shape,epochs,learning_rate):
     model.compile(loss='mean_squared_error', optimizer=adam)
     return model
 
-
-def custom_activation(x):
-    global alpha
-    return 1 / (1 + K.exp(-alpha * x))
+def custom_function(alpha):
+    def custom_activation(x):
+        return 1 / (1 + K.exp(-alpha * x))
+    
+    return custom_activation
 
 # Loading Data
 df = pd.read_csv("pems.csv", header=0)
@@ -120,7 +121,7 @@ with open('NN_PEMS.csv', 'w', 1) as nn_file:
     avg_mlp_time1 = 0
     # Initializing the model
     shape = X1_train.shape[1:]
-    MLP1 = modelNN(n,shape,epochsN,learning_rate)
+    MLP1 = modelNN(n,shape,epochsN,learning_rate,alpha)
 
     print('Running tests...')
     for test in range(0, 30):
