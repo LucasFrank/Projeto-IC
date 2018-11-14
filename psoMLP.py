@@ -72,13 +72,13 @@ class Variables:
 class Particle(Variables):
 	
 	def __init__(self):
-		print(self.learning_rate_velocity_MAX)
 		self.num_of_param = 3
 		self.p_best = []
 		self.g_best = []
 		self.position = []
 		self.velocity = []
-		self.cost = None
+		self.p_best_cost = None
+		self.g_best_cost = None
 		
 	def calculatePosition(self):
 		for i in range(self.num_of_param):
