@@ -28,6 +28,7 @@ def MAPE(y_true, y_pred):
 def modelNN(n,shape,epochs,learning_rate,alpha):
 	cf = 'custom_activation'
 	model = Sequential()
+
 	get_custom_objects().update({cf: Activation(custom_function(alpha))})
 	model.add(Dense(units = n,input_shape = shape ,activation = cf, kernel_initializer='normal'))
 	model.add(Dense(units = n, activation = cf, kernel_initializer = 'normal'))
@@ -45,19 +46,21 @@ def custom_function(alpha):
 	
 	return custom_activation
 
-class Variables:
+class VariablesControl:
 	
 	# Variaveis PSO
 	c1 = 0.6
 	c2 = 0.8
 	w = 1
+	g_best_pos = []
+	g_best_cost = 100
 
 	# Posição Limite
 	n_MAX = 120
 	n_MIN = 60
-	alpha_MAX = 40
+	alpha_MAX = 52
 	alpha_MIN = 2
-	learning_rate_MAX = 0.1
+	learning_rate_MAX = 0.001
 	learning_rate_MIN = 0.0001
 
 	# Velocidade Limite
@@ -69,16 +72,19 @@ class Variables:
 	learning_rate_velocity_MIN = -0.1 * (learning_rate_MAX - learning_rate_MIN)
 	
 	
-class Particle(Variables):
+class Particle(VariablesControl):
 	
-	def __init__(self):
+	def __init__(self,pos,vel,cost):
 		self.num_of_param = 3
-		self.p_best = []
-		self.g_best = []
-		self.position = []
-		self.velocity = []
-		self.p_best_cost = None
-		self.g_best_cost = None
+		self.p_best_pos = pos
+		self.position = pos
+		self.velocity = vel
+		self.p_best_cost = cost
+		
+		if cost < VariablesControl.g_best_cost:
+			VariablesControl.g_best_cost = cost
+			VariablesControl.g_best_pos = pos.copy()
+		
 		
 	def calculatePosition(self):
 		for i in range(self.num_of_param):
@@ -95,7 +101,7 @@ class Particle(Variables):
 		
 	def calculateVelocity(self):
 		for i in range(self.num_of_param):
-			self.velocity[i] = self.w * self.velocity[i] + self.c1 * random() * (self.p_best[i] - self.position[i]) + self.c2 * random() * (self.g_best[i] - self.position[i])
+			self.velocity[i] = self.w * self.velocity[i] + self.c1 * random.uniform(0,1) * (self.p_best_pos[i] - self.position[i]) + self.c2 * random.uniform(0,1) * (self.g_best_pos[i] - self.position[i])
 			if i == 0:
 				self.velocity[i] = max(self.velocity[i],self.n_velocity_MIN)
 				self.velocity[i] = min(self.velocity[i],self.n_velocity_MAX)
@@ -106,6 +112,14 @@ class Particle(Variables):
 				self.velocity[i] = max(self.velocity[i],self.learning_rate_velocity_MIN)
 				self.velocity[i] = min(self.velocity[i],self.learning_rate_velocity_MAX)
 			
+	def setGBest(self, position,value):
+		VariablesControl.g_best_pos = position.copy()
+		VariablesControl.g_best_cost = value;
+		
+	def setPBest(self,position,value):
+		self.p_best_pos = pos.copy()
+		self.p_best_cost = value
+		
 
 	
 
@@ -193,36 +207,74 @@ with open('NN_PEMS.csv', 'w', 1) as nn_file:
 	shape = X1_train.shape[1:]
 	
 	# Initializing the variables and the population
+	vc = VariablesControl
 	pop = []
 	for i in range(population_size):
-		p = Particle()
+		pos = []
+		n = random.randrange(vc.n_MIN,vc.n_MAX) # 0
+		alpha = random.randrange(vc.alpha_MIN,vc.alpha_MAX) # 1
+		learning_rate = random.uniform(vc.learning_rate_MIN,vc.learning_rate_MAX) # 2
+		pos.append(n); pos.append(alpha); pos.append(learning_rate)
+		
+		vel = []
+		n_v = random.randrange(vc.n_velocity_MIN,vc.n_velocity_MAX)
+		alpha_v = random.randrange(vc.alpha_velocity_MIN,vc.alpha_velocity_MAX)
+		learning_rate_v = random.uniform(vc.learning_rate_velocity_MIN,vc.learning_rate_velocity_MAX)
+		vel.append(n); vel.append(alpha); vel.append(learning_rate)
+		
+		MLP1 = modelNN(n,shape,epochsN,learning_rate,alpha)
+		MLP1.fit(X1_train, Y1_train, epochs = epochsN)
+		predicted1_nn = MLP1.predict(X1_test)
+		cost = MAPE(Y1_test, predicted1_nn)
+		
+		p = Particle(pos,vel,cost)
 		pop.append(p)
-	print(pop[5].n_velocity_MIN)
-
-	exit()
+	
 	iteration = 0
 	while(iteration < num_of_iterations):
-		MLP1 = modelNN(n,shape,epochsN,learning_rate,alpha)
-
-		print('Running tests...')
-		for test in range(0, 30):
-			if(test % 6 == 5):
-				print('T = {}%'.format(int(((test + 1)*100)/30)))
-
-			start_time = time.time()
+		num_particle = 0
+		for particle in pop:
+			particle.calculateVelocity()
+			particle.calculatePosition()
 			
-			MLP1.fit(X1_train, Y1_train, epochs = epochsN)
-			predicted1_nn = MLP1.predict(X1_test)
-			avg_mlp_time1 = avg_mlp_time1 + time.time() - start_time
-			results_nn1.append(MAPE(Y1_test, predicted1_nn))
-			print(test)
-			if(minMapeMPL1 > MAPE(Y1_test, predicted1_nn)):
-				trueValue = pd.DataFrame(Y1_test)
-				bestMLP1value = pd.DataFrame(predicted1_nn)
-				minMapeMPL = MAPE(Y1_test, predicted1_nn)
-				trueValue.to_csv("TrueValue.csv")
-				bestMLP1value.to_csv("BestMLP1value.csv")
+			n = int(particle.position[0])
+			learning_rate = particle.position[2]
+			alpha = particle.position[1]
+			MLP1 = modelNN(n,shape,epochsN,learning_rate,alpha)
+
+			print('Running tests...')
+			for test in range(0, 30):
+				if(test % 6 == 5):
+					print('T = {}%'.format(int(((test + 1)*100)/30)))
+
+				start_time = time.time()
+				
+				MLP1.fit(X1_train, Y1_train, epochs = epochsN)
+				predicted1_nn = MLP1.predict(X1_test)
+				currentCost = MAPE(Y1_test, predicted1_nn) 
+				
+				avg_mlp_time1 = avg_mlp_time1 + time.time() - start_time
+				
+				results_nn1.append(MAPE(Y1_test, predicted1_nn))
+				if(minMapeMPL1 > MAPE(Y1_test, predicted1_nn)):
+					trueValue = pd.DataFrame(Y1_test)
+					bestMLP1value = pd.DataFrame(predicted1_nn)
+					minMapeMPL = MAPE(Y1_test, predicted1_nn)
+					trueValue.to_csv("TrueValue.csv")
+					bestMLP1value.to_csv("BestMLP1value.csv")
+				
+			if currentCost < particle.p_best_cost:
+				particle.setPBest(particle.position,currentCost)
+				
+				if particle.p_best_cost < particle.g_best_cost:
+					particle.setGBest(particle.p_best_pos,particle.p_best_cost)
+			
+			print("Particle {}.".format(num_particle))
+			num_particle += 1;
 		
+		# print the best pos and cost of the population so far
+		print("Position = {}".format(pop[0].g_best_pos))
+		print("Cost = {}".format(pop[0].g_best_cost))
 		iteration += 1
 
 
