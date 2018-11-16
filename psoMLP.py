@@ -149,7 +149,7 @@ df['date'] = pd.to_datetime(df['date'])
 df.index = df['date']
 del df['date']
 
-with open('NN_PEMS.csv', 'w', 1) as nn_file:
+with open('Results/NN_PEMS.csv', 'w', 1) as nn_file:
 	# Reading CSV
 	nnwriter  = csv.writer(nn_file, delimiter=',', quoting=csv.QUOTE_MINIMAL)
 
@@ -260,8 +260,8 @@ with open('NN_PEMS.csv', 'w', 1) as nn_file:
 					trueValue = pd.DataFrame(Y1_test)
 					bestMLP1value = pd.DataFrame(predicted1_nn)
 					minMapeMPL = MAPE(Y1_test, predicted1_nn)
-					trueValue.to_csv("TrueValue.csv")
-					bestMLP1value.to_csv("BestMLP1value.csv")
+					trueValue.to_csv("Results/TrueValue.csv")
+					bestMLP1value.to_csv("Results/BestMLP1value.csv")
 				
 			if currentCost < particle.p_best_cost:
 				particle.setPBest(particle.position,currentCost)
