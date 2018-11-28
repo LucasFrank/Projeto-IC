@@ -140,8 +140,8 @@ learning_rate = 0.005
 alpha = 1
 
 # Variaveis PSO
-num_of_iterations = 10
-population_size = 10
+num_of_iterations = 30
+population_size = 50
 
 # Loading Data
 df = pd.read_csv("pems.csv", header=0)
@@ -158,7 +158,7 @@ with open('Results/PSO_NN_PEMS.csv', 'w', 1) as nn_file:
 	nnwriter  = csv.writer(nn_file, delimiter=',', quoting=csv.QUOTE_MINIMAL)
 
 	# Writing results headers
-	nnwriter.writerow(['Particle','P', 'Q', 'N', 'H', 'Avg Mape', 'Min MAPE', 'Avg time'])
+	nnwriter.writerow(['Particle','P', 'Q', 'N', 'Learning_Rate', 'Alpha' , 'Avg Mape', 'Min MAPE', 'Avg time'])
 
 	# Using historic data (Q) from the same time and weekday
 	for i in range (1, MAX_Q + 1):
@@ -204,8 +204,8 @@ with open('Results/PSO_NN_PEMS.csv', 'w', 1) as nn_file:
 	X1_train = np.array( [X1[j] for j in list(set(range(len(X1))) - set(rows1))] )
 	Y1_train = np.array([Y1[j] for j in list(set(range(len(Y1))) - set(rows1))] )
 
-	
-	
+
+
 	avg_mlp_time1 = 0
 	# Initializing the model
 	shape = X1_train.shape[1:]
@@ -235,6 +235,7 @@ with open('Results/PSO_NN_PEMS.csv', 'w', 1) as nn_file:
 		particle = Particle(pos,vel,cost,i)
 		pop.append(particle)
 
+	nnwriter.writerow([pop[0].g_particle, p, q, pop[0].g_best_pos[0], pop[0].g_best_pos[2], pop[0].g_best_pos[1] , 0.0, pop[0].g_best_cost, avg_mlp_time1 / 30])
 	iteration = 0
 	print('\nRunning PSO Loop...')
 	while(iteration < num_of_iterations):
@@ -251,7 +252,7 @@ with open('Results/PSO_NN_PEMS.csv', 'w', 1) as nn_file:
 			MLP1 = modelNN(n,shape,epochsN,learning_rate,alpha)
 
 			print('Running tests...')
-			for test in range(0, 30):
+			for test in range(0, 1):
 				print(test)
 				if(test % 6 == 5):
 					print('T = {}%'.format(int(((test + 1)*100)/30)))
@@ -271,7 +272,7 @@ with open('Results/PSO_NN_PEMS.csv', 'w', 1) as nn_file:
 					minMapeMPL = MAPE(Y1_test, predicted1_nn)
 					trueValue.to_csv("Results/TrueValue.csv")
 					bestMLP1value.to_csv("Results/BestMLPvalue.csv")
-			
+
 			lowestCurrentCost = min(results_nn1)
 			if lowestCurrentCost < pop[index].p_best_cost:
 				pop[index].setPBest(pop[index].position,lowestCurrentCost)
@@ -279,7 +280,7 @@ with open('Results/PSO_NN_PEMS.csv', 'w', 1) as nn_file:
 				if pop[index].p_best_cost < pop[index].g_best_cost:
 					pop[index].setGBest(pop[index].p_best_pos,pop[index].p_best_cost,index)
 
-			nnwriter.writerow([index, p, q, n, 1, np.mean(results_nn1), min(results_nn1), avg_mlp_time1 / 30])
+			nnwriter.writerow([index, p, q, n, learning_rate, alpha, np.mean(results_nn1), min(results_nn1), avg_mlp_time1 / 30])
 
 		# print the best position, cost and particle of the population so far
 		print("Position = {}".format(pop[0].g_best_pos))
