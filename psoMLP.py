@@ -33,7 +33,6 @@ def modelNN(n,shape,epochs,learning_rate,alpha):
 	model.add(Dense(units = n,input_shape = shape ,activation = cf, kernel_initializer='normal'))
 	model.add(Dense(units = n, activation = cf, kernel_initializer = 'normal'))
 	model.add(Dense(units = n, activation = cf, kernel_initializer = 'normal'))
-	model.add(Dense(units = n, activation = cf, kernel_initializer = 'normal'))
 	model.add(Dense(units = 1, activation = 'sigmoid', kernel_initializer = 'normal'))
 	decay_rate = learning_rate/epochs;
 	adam = Adam(lr = learning_rate,decay = decay_rate)
@@ -130,8 +129,8 @@ class Particle(VariablesControl):
 
 # Variaveis Fixadas
 MAX_Q = 5
-p = 13
-q = 4
+p = 10 # p = 10
+q = 4 # q = 4  & n = 90 it scored a 5.92\% average MAPE and its best performance resulted in a MAPE of 5.37
 epochsN = 1 # modificar talvez
 
 # Variaveis a ser otimizadas
@@ -140,8 +139,10 @@ learning_rate = 0.005
 alpha = 1
 
 # Variaveis PSO
-num_of_iterations = 30
-population_size = 50
+num_of_iterations = 15
+population_size = 20
+
+testNumber = 30
 
 # Loading Data
 df = pd.read_csv("pems.csv", header=0)
@@ -207,6 +208,7 @@ with open('Results/PSO_NN_PEMS.csv', 'w', 1) as nn_file:
 
 
 	avg_mlp_time1 = 0
+	final_time = 0
 	# Initializing the model
 	shape = X1_train.shape[1:]
 
@@ -236,8 +238,11 @@ with open('Results/PSO_NN_PEMS.csv', 'w', 1) as nn_file:
 		pop.append(particle)
 
 	nnwriter.writerow([pop[0].g_particle, p, q, pop[0].g_best_pos[0], pop[0].g_best_pos[2], pop[0].g_best_pos[1] , 0.0, pop[0].g_best_cost, avg_mlp_time1 / 30])
+
 	iteration = 0
 	print('\nRunning PSO Loop...')
+	start_time = time.time()
+	changesPSO = 0
 	while(iteration < num_of_iterations):
 		print('\nRunning... : {} of {}.'.format(iteration+1,num_of_iterations))
 		for index in range(population_size):
@@ -252,18 +257,13 @@ with open('Results/PSO_NN_PEMS.csv', 'w', 1) as nn_file:
 			MLP1 = modelNN(n,shape,epochsN,learning_rate,alpha)
 
 			print('Running tests...')
-			for test in range(0, 1):
-				print(test)
+			for test in range(0, testNumber):
 				if(test % 6 == 5):
-					print('T = {}%'.format(int(((test + 1)*100)/30)))
-
-				start_time = time.time()
+					print('T = {}%'.format(int(((test + 1)*100)/testNumber)))
 
 				MLP1.fit(X1_train, Y1_train, epochs = epochsN,verbose=0)
 				predicted1_nn = MLP1.predict(X1_test)
 				currentCost = MAPE(Y1_test, predicted1_nn)
-
-				avg_mlp_time1 = avg_mlp_time1 + time.time() - start_time
 
 				results_nn1.append(MAPE(Y1_test, predicted1_nn))
 				if(minMapeMPL1 > MAPE(Y1_test, predicted1_nn)):
@@ -279,13 +279,19 @@ with open('Results/PSO_NN_PEMS.csv', 'w', 1) as nn_file:
 
 				if pop[index].p_best_cost < pop[index].g_best_cost:
 					pop[index].setGBest(pop[index].p_best_pos,pop[index].p_best_cost,index)
+					changesPSO += 1
+			avg_pso_time1 = time.time() - start_time
+			nnwriter.writerow([index, p, q, n, learning_rate, alpha, np.mean(results_nn1), min(results_nn1), avg_pso_time1])
+			K.clear_session()
 
-			nnwriter.writerow([index, p, q, n, learning_rate, alpha, np.mean(results_nn1), min(results_nn1), avg_mlp_time1 / 30])
-
+		final_time = time.time() - start_time
 		# print the best position, cost and particle of the population so far
 		print("Position = {}".format(pop[0].g_best_pos))
 		print("Cost = {}".format(pop[0].g_best_cost))
 		print("Particle = {}".format(pop[0].g_particle))
+		print("Time = {}".format(final_time))
+		print("GBest_Change = {}".format(changesPSO))
 		iteration += 1
+
 	print('- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -')
 df = aux_df
