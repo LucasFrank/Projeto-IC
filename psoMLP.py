@@ -48,9 +48,9 @@ def custom_function(alpha):
 class VariablesControl:
 
 	# Variaveis PSO
-	c1 = 0.6
-	c2 = 0.8
-	w = 1
+	c1 = 2
+	c2 = 2
+	w = 0.7
 	g_best_pos = []
 	g_best_cost = 100
 	g_particle = None
@@ -114,12 +114,12 @@ class Particle(VariablesControl):
 				self.velocity[i] = max(self.velocity[i],self.learning_rate_velocity_MIN)
 				self.velocity[i] = min(self.velocity[i],self.learning_rate_velocity_MAX)
 
-	def setGBest(self, position,value, index):
-		VariablesControl.g_best_pos = position.copy()
+	def setGBest(self, pos, value, index):
+		VariablesControl.g_best_pos = pos.copy()
 		VariablesControl.g_best_cost = value
 		VariablesControl.g_particle = index
 
-	def setPBest(self,position,value):
+	def setPBest(self, pos, value):
 		self.p_best_pos = pos.copy()
 		self.p_best_cost = value
 
@@ -139,9 +139,8 @@ learning_rate = 0.005
 alpha = 1
 
 # Variaveis PSO
-num_of_iterations = 15
-population_size = 20
-
+num_of_iterations = 30
+population_size = 30
 testNumber = 30
 
 # Loading Data
@@ -204,8 +203,6 @@ with open('Results/PSO_NN_PEMS.csv', 'w', 1) as nn_file:
 	Y1_test = np.array( [Y1[j] for j in rows1] )
 	X1_train = np.array( [X1[j] for j in list(set(range(len(X1))) - set(rows1))] )
 	Y1_train = np.array([Y1[j] for j in list(set(range(len(Y1))) - set(rows1))] )
-
-
 
 	avg_mlp_time1 = 0
 	final_time = 0
@@ -277,9 +274,10 @@ with open('Results/PSO_NN_PEMS.csv', 'w', 1) as nn_file:
 			if lowestCurrentCost < pop[index].p_best_cost:
 				pop[index].setPBest(pop[index].position,lowestCurrentCost)
 
-				if pop[index].p_best_cost < pop[index].g_best_cost:
-					pop[index].setGBest(pop[index].p_best_pos,pop[index].p_best_cost,index)
+				if lowestCurrentCost < pop[index].g_best_cost:
+					pop[index].setGBest(pop[index].position,lowestCurrentCost,index)
 					changesPSO += 1
+
 			avg_pso_time1 = time.time() - start_time
 			nnwriter.writerow([index, p, q, n, learning_rate, alpha, np.mean(results_nn1), min(results_nn1), avg_pso_time1])
 			K.clear_session()
